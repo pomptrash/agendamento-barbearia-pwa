@@ -11,3 +11,115 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+model Barbearia {
+  id String @id @default(uuid()) @db.Uuid
+  nome String
+  endereco String
+  logo String?
+  subdominio String @unique
+
+  barbeiros Barbeiro[]
+  usuarios Usuario[]
+  servicos Servico[]
+  clientes Cliente[]
+  agendamentos Agendamento[]
+  atendimentosAvulsos AtendimentoAvulso[]
+  
+}
+
+model Barbeiro {
+  id String @id @default(uuid()) @db.Uuid
+  nome String
+  foto String?
+  barbeariaId String @db.Uuid 
+
+  barbearia Barbearia @relation(fields: [barbeariaId], references: [id])
+  servicos Servico[]
+  agendamentos Agendamento[]
+  atendimentosAvulsos AtendimentoAvulso[]
+
+  usuario Usuario?
+}
+
+model Usuario {
+  id String @id @default(uuid()) @db.Uuid
+  login String
+  cargo Cargo @default(BARBEIRO)
+  barbeiroId String @db.Uuid @unique
+  barbeariaId String @db.Uuid
+
+  barbeiro Barbeiro @relation(fields: [barbeiroId], references: [id])
+  barbearia Barbearia @relation(fields: [barbeariaId], references: [id])
+  @@unique([barbeariaId, login])
+}
+
+enum Cargo {
+  ADMINISTRADOR
+  BARBEIRO
+}
+
+model Cliente {
+  id String @id @default(uuid()) @db.Uuid
+  nome String
+  telefone String
+  barbeariaId String @db.Uuid
+  
+  barbearia Barbearia @relation(fields: [barbeariaId], references: [id])
+
+  agendamentos Agendamento[]
+
+  @@unique([barbeariaId, telefone])
+}
+
+model Servico {
+  id String @id @default(uuid()) @db.Uuid
+  nome String
+  valor Decimal @db.Decimal(10, 2)
+  duracao Int
+  barbeariaId String @db.Uuid
+
+  barbearia Barbearia @relation(fields: [barbeariaId], references: [id])
+  barbeiros Barbeiro[]
+  agendamentos Agendamento[]
+  atendimentosAvulsos AtendimentoAvulso[]
+}
+
+model Agendamento {
+  id String @id @default(uuid()) @db.Uuid
+  valorPago Decimal? @db.Decimal(10,2)
+  dataHora DateTime
+  status Status @default(AGENDADO)
+
+  barbeariaId String @db.Uuid 
+  clienteId String @db.Uuid
+  barbeiroId String @db.Uuid
+  servicoId String @db.Uuid
+
+  barbearia Barbearia @relation(fields: [barbeariaId], references: [id])
+  cliente Cliente @relation(fields: [clienteId], references: [id])
+  barbeiro Barbeiro @relation(fields: [barbeiroId], references: [id])
+  servico Servico @relation(fields: [servicoId], references: [id])
+}
+
+enum Status {
+  AGENDADO
+  CANCELADO
+  CONCLUIDO
+  NAO_COMPARECEU
+}
+
+model AtendimentoAvulso {
+  id String @id @default(uuid()) @db.Uuid
+  dataHora DateTime
+  nomeCliente String
+  valorPago Decimal @db.Decimal(10,2)
+
+  barbeiroId String @db.Uuid
+  servicoId String @db.Uuid
+  barbeariaId String @db.Uuid
+
+  barbeiro Barbeiro @relation(fields: [barbeiroId], references: [id])
+  servico Servico @relation(fields: [servicoId], references: [id])
+  barbearia Barbearia @relation(fields: [barbeariaId], references: [id])
+}

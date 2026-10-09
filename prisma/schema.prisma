@@ -64,6 +64,8 @@ model Cliente {
   nome        String
   telefone    String
   barbeariaId String @db.Uuid
+  assinatura Boolean @default(false)
+  vencimentoAssinatura DateTime? @db.Timestamptz
 
   barbearia Barbearia @relation(fields: [barbeariaId], references: [id])
 

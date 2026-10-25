@@ -80,24 +80,53 @@ export async function POST(request, { params }) {
     // Verifica se o barbeiro já possui agendamento no mesmo horário/intervalo
     const agendamentosExistentes = await prisma.agendamento.findMany({
       where: {
-        barbeiroId,
+        barbeariaId: barbeariaID,
         status: { not: "CANCELADO" },
+        OR: [
+          { barbeiroId: barbeiroId }, // Agendamentos do mesmo barbeiro
+          { clienteId: clienteId }, // Agendamentos do mesmo cliente
+        ],
       },
       include: { servico: true },
     });
 
-    const conflito = agendamentosExistentes.some((item) => {
+    // verifica se já existe agendamento no mesmo horário para o mesmo barbeiro
+    const conflitoBarbeiro = agendamentosExistentes.some((item) => {
+      if (item.barbeiroId !== barbeiroId) return false;
       const inicioExistente = new Date(item.dataHora);
-      const fimExistente = new Date(inicioExistente.getTime() + item.servico.duracao * 60000);
-
-      // Checa se há sobreposição de horários
+      const fimExistente = new Date(
+        inicioExistente.getTime() + item.servico.duracao * 60000,
+      );
       return inicioNovo < fimExistente && fimNovo > inicioExistente;
     });
 
-    if (conflito) {
+    if (conflitoBarbeiro) {
       return NextResponse.json(
-        { error: "O barbeiro selecionado já possui um agendamento nesse horário" },
-        { status: 409 }
+        {
+          error:
+            "O barbeiro selecionado já possui um agendamento nesse horário",
+        },
+        { status: 409 },
+      );
+    }
+
+    // verifica se o cliente já possui agendamento para o mesmo horário
+    const conflitoCliente = agendamentosExistentes.some((item) => {
+      if (item.clienteId !== clienteId) return false;
+      const inicioExistente = new Date(item.dataHora);
+      const fimExistente = new Date(
+        inicioExistente.getTime() + item.servico.duracao * 60000,
+      );
+      return inicioNovo < fimExistente && fimNovo > inicioExistente;
+    });
+
+    if (conflitoCliente) {
+      return NextResponse.json(
+        {
+          error:
+            "Você já possui outro agendamento pendente nesse mesmo horário",
+        },
+        { status: 409 },
       );
     }
 

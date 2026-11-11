@@ -26,7 +26,7 @@ export async function middleware(request) {
   }
 
   // Definir rotas públicas que não exigem autenticação
-  const rotasPublicas = ['/login', '/api/auth/login']
+  const rotasPublicas = ['/login', '/api/auth/login', '/api/auth/logout']
   const ehRotaPublica = rotasPublicas.some((rota) => pathname.startsWith(rota))
 
   // Se for acesso público à raiz da barbearia (vitrine de agendamento do cliente), permite passar

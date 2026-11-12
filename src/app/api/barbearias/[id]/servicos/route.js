@@ -1,12 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { getUsuarioAutenticado } from '@/lib/auth'
 
-// GET: Lista todos os serviços de uma barbearia específica
 export async function GET(request, { params }) {
   const { id: barbeariaID } = await params;
 
   try {
-    // 1. Verifica se a barbearia existe
     const barbeariaExiste = await prisma.barbearia.findUnique({
       where: { id: barbeariaID },
     });
@@ -18,7 +17,6 @@ export async function GET(request, { params }) {
       );
     }
 
-    // 2. Busca os serviços da barbearia
     const servicos = await prisma.servico.findMany({
       where: { barbeariaId: barbeariaID },
     });
@@ -34,14 +32,27 @@ export async function GET(request, { params }) {
   }
 }
 
-// POST: Cadastra um novo serviço vinculado a esta barbearia
 export async function POST(request, { params }) {
   const { id: barbeariaID } = await params;
+  const usuario = await getUsuarioAutenticado(request)
+
+  if (!usuario) {
+    return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 })
+  }
+
+  const ehDonoDaBarbearia =
+    usuario.cargo === 'ADMINISTRADOR' && usuario.barbeariaId === barbeariaID
+
+  if (usuario.cargo !== 'SUPER_ADMIN' && !ehDonoDaBarbearia) {
+    return NextResponse.json(
+      { error: 'Acesso negado.' },
+      { status: 403 }
+    )
+  }
 
   try {
     const body = await request.json();
 
-    // Validação de campos obrigatórios
     if (!body.nome || body.valor === undefined || body.duracao === undefined) {
       return NextResponse.json(
         { error: "Preencha os campos obrigatórios (nome, valor e duracao)" },
@@ -49,7 +60,6 @@ export async function POST(request, { params }) {
       );
     }
 
-    // Cria o serviço no banco
     const novoServico = await prisma.servico.create({
       data: {
         nome: body.nome,
@@ -63,7 +73,6 @@ export async function POST(request, { params }) {
   } catch (error) {
     console.error(error);
 
-    // Violação de Foreign Key se o barbeariaID não existir no banco
     if (error.code === "P2003") {
       return NextResponse.json(
         { error: "Barbearia informada não existe" },

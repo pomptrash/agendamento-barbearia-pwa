@@ -29,8 +29,11 @@ export async function middleware(request) {
   const rotasPublicas = ['/login', '/api/auth/login', '/api/auth/logout']
   const ehRotaPublica = rotasPublicas.some((rota) => pathname.startsWith(rota))
 
-  // Se for acesso público à raiz da barbearia (vitrine de agendamento do cliente), permite passar
-  if (ehRotaPublica || (subdominio && pathname === '/')) {
+  // Libera consulta pública (GET) dos serviços de uma barbearia para a vitrine de agendamento
+  const ehConsultaPublicaServicos =
+    request.method === 'GET' && /^\/api\/barbearias\/[^/]+\/servicos$/.test(pathname)
+
+  if (ehRotaPublica || ehConsultaPublicaServicos || (subdominio && pathname === '/')) {
     const response = NextResponse.next()
     if (subdominio) {
       response.headers.set('x-tenant-subdominio', subdominio)

@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { getUsuarioAutenticado } from '@/lib/auth'
 
-// GET: Busca os detalhes de um serviço específico de uma barbearia
 export async function GET(request, { params }) {
   const { id: barbeariaID, servicoId } = await params;
 
@@ -28,9 +28,23 @@ export async function GET(request, { params }) {
   }
 }
 
-// PUT: Atualiza nome, valor ou duração de um serviço
 export async function PUT(request, { params }) {
   const { id: barbeariaID, servicoId } = await params;
+  const usuario = await getUsuarioAutenticado(request)
+
+  if (!usuario) {
+    return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 })
+  }
+
+  const ehDonoDaBarbearia =
+    usuario.cargo === 'ADMINISTRADOR' && usuario.barbeariaId === barbeariaID
+
+  if (usuario.cargo !== 'SUPER_ADMIN' && !ehDonoDaBarbearia) {
+    return NextResponse.json(
+      { error: 'Acesso negado. Sem permissão para editar serviços desta barbearia.' },
+      { status: 403 }
+    )
+  }
 
   try {
     const body = await request.json();
@@ -42,7 +56,6 @@ export async function PUT(request, { params }) {
       );
     }
 
-    // 1. Verifica se o serviço existe e pertence a esta barbearia
     const servicoExiste = await prisma.servico.findUnique({
       where: { id: servicoId },
     });
@@ -54,7 +67,6 @@ export async function PUT(request, { params }) {
       );
     }
 
-    // 2. Executa a atualização
     const servicoAtualizado = await prisma.servico.update({
       where: { id: servicoId },
       data: {
@@ -75,12 +87,25 @@ export async function PUT(request, { params }) {
   }
 }
 
-// DELETE: Remove um serviço
 export async function DELETE(request, { params }) {
   const { id: barbeariaID, servicoId } = await params;
+  const usuario = await getUsuarioAutenticado(request)
+
+  if (!usuario) {
+    return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 })
+  }
+
+  const ehDonoDaBarbearia =
+    usuario.cargo === 'ADMINISTRADOR' && usuario.barbeariaId === barbeariaID
+
+  if (usuario.cargo !== 'SUPER_ADMIN' && !ehDonoDaBarbearia) {
+    return NextResponse.json(
+      { error: 'Acesso negado. Sem permissão para excluir serviços desta barbearia.' },
+      { status: 403 }
+    )
+  }
 
   try {
-    // 1. Verifica se o serviço existe e pertence a esta barbearia
     const servicoExiste = await prisma.servico.findUnique({
       where: { id: servicoId },
     });
@@ -92,7 +117,6 @@ export async function DELETE(request, { params }) {
       );
     }
 
-    // 2. Executa a exclusão
     await prisma.servico.delete({
       where: { id: servicoId },
     });

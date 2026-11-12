@@ -31,7 +31,7 @@ export async function middleware(request) {
 
   // Libera consulta pública (GET) dos serviços de uma barbearia para a vitrine de agendamento
   const ehConsultaPublicaServicos =
-    request.method === 'GET' && /^\/api\/barbearias\/[^/]+\/servicos$/.test(pathname)
+    request.method === 'GET' && /^\/api\/barbearias\/[^/]+\/(servicos|barbeiros(\/[^/]+\/servicos)?)$/.test(pathname)
 
   if (ehRotaPublica || ehConsultaPublicaServicos || (subdominio && pathname === '/')) {
     const response = NextResponse.next()

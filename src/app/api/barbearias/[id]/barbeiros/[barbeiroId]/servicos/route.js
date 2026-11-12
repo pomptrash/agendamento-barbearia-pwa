@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { getUsuarioAutenticado } from '@/lib/auth'
 
 export async function GET(request, { params }) {
   const { id: barbeariaID, barbeiroId } = await params;
@@ -36,6 +37,26 @@ export async function GET(request, { params }) {
 
 export async function POST(request, { params }) {
   const { id: barbeariaID, barbeiroId } = await params;
+  const usuario = await getUsuarioAutenticado(request)
+
+  if (!usuario) {
+    return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 })
+  }
+
+  const ehDonoDaBarbearia =
+    usuario.cargo === 'ADMINISTRADOR' && usuario.barbeariaId === barbeariaID
+
+  const ehOProprioBarbeiro =
+    usuario.cargo === 'BARBEIRO' &&
+    usuario.barbeariaId === barbeariaID &&
+    usuario.barbeiroId === barbeiroId
+
+  if (usuario.cargo !== 'SUPER_ADMIN' && !ehDonoDaBarbearia && !ehOProprioBarbeiro) {
+    return NextResponse.json(
+      { error: 'Acesso negado. Sem permissão para vincular serviços a este barbeiro.' },
+      { status: 403 }
+    )
+  }
 
   try {
     const body = await request.json();

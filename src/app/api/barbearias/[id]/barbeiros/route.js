@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { getUsuarioAutenticado } from '@/lib/auth'
 
-// GET: Lista todos os barbeiros de uma barbearia específica
 export async function GET(request, { params }) {
   const { id: barbeariaID } = await params;
 
@@ -34,9 +34,23 @@ export async function GET(request, { params }) {
   }
 }
 
-// POST: Cadastra um novo barbeiro vinculado a esta barbearia
 export async function POST(request, { params }) {
   const { id: barbeariaID } = await params;
+  const usuario = await getUsuarioAutenticado(request)
+
+  if (!usuario) {
+    return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 })
+  }
+
+  const ehDonoDaBarbearia =
+    usuario.cargo === 'ADMINISTRADOR' && usuario.barbeariaId === barbeariaID
+
+  if (usuario.cargo !== 'SUPER_ADMIN' && !ehDonoDaBarbearia) {
+    return NextResponse.json(
+      { error: 'Acesso negado. Apenas o administrador da barbearia pode cadastrar barbeiros.' },
+      { status: 403 }
+    )
+  }
 
   try {
     const body = await request.json();

@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { getUsuarioAutenticado } from '@/lib/auth'
 
-// GET: Busca um barbeiro específico pelo ID dentro de uma barbearia
 export async function GET(request, { params }) {
   const { id: barbeariaID, barbeiroId } = await params;
 
@@ -29,9 +29,23 @@ export async function GET(request, { params }) {
   }
 }
 
-// PUT: Atualiza os dados de um barbeiro específico
 export async function PUT(request, { params }) {
   const { id: barbeariaID, barbeiroId } = await params;
+  const usuario = await getUsuarioAutenticado(request)
+
+  if (!usuario) {
+    return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 })
+  }
+
+  const ehDonoDaBarbearia =
+    usuario.cargo === 'ADMINISTRADOR' && usuario.barbeariaId === barbeariaID
+
+  if (usuario.cargo !== 'SUPER_ADMIN' && !ehDonoDaBarbearia) {
+    return NextResponse.json(
+      { error: 'Acesso negado. Sem permissão para editar barbeiros desta barbearia.' },
+      { status: 403 }
+    )
+  }
 
   try {
     const body = await request.json();
@@ -75,9 +89,23 @@ export async function PUT(request, { params }) {
   }
 }
 
-// DELETE: Remove um barbeiro específico
 export async function DELETE(request, { params }) {
   const { id: barbeariaID, barbeiroId } = await params;
+  const usuario = await getUsuarioAutenticado(request)
+
+  if (!usuario) {
+    return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 })
+  }
+
+  const ehDonoDaBarbearia =
+    usuario.cargo === 'ADMINISTRADOR' && usuario.barbeariaId === barbeariaID
+
+  if (usuario.cargo !== 'SUPER_ADMIN' && !ehDonoDaBarbearia) {
+    return NextResponse.json(
+      { error: 'Acesso negado. Sem permissão para excluir barbeiros desta barbearia.' },
+      { status: 403 }
+    )
+  }
 
   try {
     // 1. Verifica se o barbeiro existe e pertence a esta barbearia

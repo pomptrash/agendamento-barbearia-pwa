@@ -1,8 +1,21 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { getUsuarioAutenticado } from '@/lib/auth'
 
 export async function GET(request, { params }) {
   const { id: barbeariaID } = await params;
+  const usuario = await getUsuarioAutenticado(request)
+
+  if (!usuario) {
+    return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 })
+  }
+
+  if (usuario.cargo !== 'SUPER_ADMIN' && usuario.barbeariaId !== barbeariaID) {
+    return NextResponse.json(
+      { error: 'Acesso negado a esta barbearia.' },
+      { status: 403 }
+    )
+  }
 
   try {
     const barbearia = await prisma.barbearia.findUnique({
@@ -29,6 +42,21 @@ export async function GET(request, { params }) {
 
 export async function PUT(request, { params }) {
   const { id: barbeariaID } = await params;
+  const usuario = await getUsuarioAutenticado(request)
+
+  if (!usuario) {
+    return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 })
+  }
+
+  const ehDonoDaBarbearia =
+    usuario.cargo === 'ADMINISTRADOR' && usuario.barbeariaId === barbeariaID
+
+  if (usuario.cargo !== 'SUPER_ADMIN' && !ehDonoDaBarbearia) {
+    return NextResponse.json(
+      { error: 'Acesso negado. Sem permissão para editar esta barbearia.' },
+      { status: 403 }
+    )
+  }
 
   try {
     const body = await request.json();
@@ -79,6 +107,14 @@ export async function PUT(request, { params }) {
 
 export async function DELETE(request, { params }) {
   const { id: barbeariaID } = await params;
+  const usuario = await getUsuarioAutenticado(request)
+
+  if (!usuario || usuario.cargo !== 'SUPER_ADMIN') {
+    return NextResponse.json(
+      { error: 'Acesso negado. Apenas o Super Admin pode excluir barbearias.' },
+      { status: 403 }
+    )
+  }
 
   try {
     await prisma.barbearia.delete({
